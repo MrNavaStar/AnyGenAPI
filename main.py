@@ -15,59 +15,47 @@ def index():
 @app.get("/generate")
 async def generate(fastapi_req: fastapi.Request):
     data = await fastapi_req.body()
-    args = dataParser(data)
-
+    d = data.decode("utf-8").replace(" ", "").replace("\n", "").replace("\t", "").replace("]", "];").casefold()
+    args = argParser(d)
 
     print(data.decode("utf-8"))
+
     print(args)
     print(count("people-names", args))
 
 
-# Parse the cleaned data into a "nice" list
-def argParser(template: list) -> list:
+def argParser(input: str) -> list:
     args = []
-    for arg in template:
-        data = re.split(":", arg, maxsplit=1)
-
-        if "list" in data[1]:
-            count_and_args = re.split("\\)", data[1].replace("list(", "", 1), maxsplit=1)
-            new_template = list(filter(None, "".join(count_and_args[1].replace("[", "", 1).rsplit("]", 1)).split("#")))
-            data.append(argParser(new_template))
-            data.append(int(count_and_args[0]))
-            data[1] = "list"
-
-        else:
-            params = re.split("\\(|,", data[1].replace(")", ""))
-            data[1] = params.pop(0)
-            if len(params) > 0:
-                data.append(params)
-
-        args.append(data)
-    return args
-
-
-# Convert raw data to a format that can be more easily parsed
-def dataParser(data: bytes) -> list:
-    data = list(data.decode("utf-8").replace(" ", "").replace("\n", "").replace("]", "];").casefold())
-
-    out = []
+    start = 0
     brace_count = 0
-    j = 0
-    for i in range(len(data)):
-        char = data[i]
+    for i in range(len(input)):
+        char = input[i]
+
         if char == "[":
             brace_count += 1
         if char == "]":
             brace_count -= 1
 
-        if char == ";" and brace_count > 0:
-            data[i] = "#"
         if char == ";" and brace_count == 0:
-            out.append("".join(data[j:i]))
-            j = i + 1
-    template = list(filter(None, out))
-    print(template)
-    return argParser(template)
+            arg = "".join(input[start:i])
+            data = re.split(":", arg, maxsplit=1)
+
+            if "list" in data[1]:
+                count_and_args = re.split("\\)", data[1].replace("list(", "", 1), maxsplit=1)
+                data.append(argParser(count_and_args[1][1:-1]))
+                data.append(int(count_and_args[0]))
+                data[1] = "list"
+
+            else:
+                params = re.split("[(,]", data[1].replace(")", ""))
+                data[1] = params.pop(0)
+                if len(params) > 0:
+                    data.append(params)
+
+            args.append(list(data))
+            start = i + 1
+
+    return args
 
 
 def generateJson(args: list, json: list):
@@ -118,17 +106,14 @@ def generateJson(args: list, json: list):
 def count(arg_name: str, args: list):
     c = 0
     for arg in args:
-        if arg[1] == arg_name:
+        if arg[1] == "list":
+            c += count(arg_name, arg[2]) * arg[3]
+
+        elif arg[1] == arg_name:
             c += 1
 
-        if arg[1] == "list":
-            print(arg[2])
-            print(arg[3])
-            c += count(arg_name, arg[2]) * arg[3]
     return c
 
-
-#def betterGenerateJson(args: list, json: list):
 
 
 if __name__ == '__main__':
