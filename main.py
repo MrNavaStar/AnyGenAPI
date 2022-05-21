@@ -21,7 +21,7 @@ async def generate(fastapi_req: fastapi.Request):
     print(data.decode("utf-8"))
 
     print(args)
-    print(count("people-names", args))
+    print(count(args))
 
 
 def argParser(input: str) -> list:
@@ -103,16 +103,25 @@ def generateJson(args: list, json: list):
             pass
 
 
-def count(arg_name: str, args: list):
+def generateJson2(args: list, json: list):
+    amountToGen = count(args)
+
+
+def count(args: list):
     c = 0
+    c1 = 0
     for arg in args:
         if arg[1] == "list":
-            c += count(arg_name, arg[2]) * arg[3]
+            counts = count(arg[2])
+            c += counts[0] * arg[3]
+            c1 += counts[1] * arg[3]
 
-        elif arg[1] == arg_name:
+        elif arg[1] == "people-names":
             c += 1
+        elif arg[1] == "lorem-ipsum":
+            c1 += 1
 
-    return c
+    return [c, c1]
 
 
 
