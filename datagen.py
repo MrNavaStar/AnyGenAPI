@@ -2,37 +2,34 @@ import random
 from lorem_text import lorem
 
 
-# params[0] = params from request
-# params[1] = amount of elements to be generated
-def people_names(params: list) -> list:
+def people_names(amount: int, type: str) -> list:
     names = []
-    if "first" in params[0]:
+    if type == "first":
         with open("data/first_names.csv") as fp:
             data = fp.readlines()
-            for i in range(params[1]):
-                names.append(data[random.randint(0, 147269)].split(",")[0])
+            for i in range(amount):
+                names.append(data[random.randint(0, 147268)].replace("\n", ""))
+            fp.close()
+
+    if type == "last":
+        with open("data/last_names.csv") as fp:
+            data = fp.readlines()
+            for i in range(amount):
+                names.append(data[random.randint(0, 151670)].replace("\n", ""))
+            fp.close()
+
     return names
 
 
-def genders(amount: int) -> list:
-    genders = []
-    for i in range(amount):
-        if random.randint(0, 1) == 1:
-            genders.append("M")
-        else:
-            genders.append("F")
-    return genders
+def gender() -> str:
+    if random.randint(0, 1) == 1:
+        return "M"
+    else:
+        return "F"
 
 
-def numbers(min: int, max: int, amount: int) -> list:
-    ints = []
-    for i in range(amount):
-        ints.append(random.randint(min, max))
-    return ints
-
-
-def lorem_ipsum(params: list) -> list:
+def lorem_ipsum(amount: int, words: int) -> list:
     lorems = []
-    for i in range(params[1]):
-        lorems.append(lorem.words(params[0]))
+    for i in range(amount):
+        lorems.append(lorem.words(words))
     return lorems

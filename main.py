@@ -1,10 +1,17 @@
+import random
 import re
 import fastapi
-import uvicorn
 from fastapi import FastAPI
 import datagen
 
 app = FastAPI()
+
+
+class SlowData:
+    def __init__(self, args):
+        amountToGen = count(args)
+        self.first_names = datagen.people_names(amountToGen.first_names, "first")
+        self.last_names = datagen.people_names(amountToGen.last_names, "last")
 
 
 @app.get("/")
@@ -15,13 +22,9 @@ def index():
 @app.get("/generate")
 async def generate(fastapi_req: fastapi.Request):
     data = await fastapi_req.body()
-    d = data.decode("utf-8").replace(" ", "").replace("\n", "").replace("\t", "").replace("]", "];").casefold()
-    args = argParser(d)
-
-    print(data.decode("utf-8"))
-
+    args = argParser(data.decode("utf-8").replace(" ", "").replace("\n", "").replace("\t", "").replace("]", "];").casefold())
     print(args)
-    print(count(args))
+    return generateJson2(args, SlowData(args))
 
 
 def argParser(input: str) -> list:
@@ -33,10 +36,10 @@ def argParser(input: str) -> list:
 
         if char == "[":
             brace_count += 1
-        if char == "]":
+        elif char == "]":
             brace_count -= 1
 
-        if char == ";" and brace_count == 0:
+        elif char == ";" and brace_count == 0:
             arg = "".join(input[start:i])
             data = re.split(":", arg, maxsplit=1)
 
@@ -58,72 +61,77 @@ def argParser(input: str) -> list:
     return args
 
 
-def generateJson(args: list, json: list):
-    for arg in args:
-        output_name = arg[0]
-        arg = arg[1]
+def generateJson2(args: list, slow_data: SlowData):
+    json = {}
+    for raw_arg in args:
+        output_name = raw_arg[0]
+        arg = raw_arg[1]
         params = None
-        if len(arg) == 3:
-            params = arg[2]
+        if len(raw_arg) == 3:
+            params = raw_arg[2]
 
         match arg:
-            case "people-names":
-                if params is None:
-                    params = ["first", amount]
+            case "list":
+                json_array = []
+                for i in range(raw_arg[3]):
+                    json_array.append(generateJson2(raw_arg[2], slow_data))
 
-                names = datagen.people_names(params)
-                for i in range(len(names)):
-                    json[i] = json[i] | {output_name: names[i]}
+                json[output_name] = json_array
+                continue
+
+            case "people-names":
+                name = ""
+                if "first" in params:
+                    name += slow_data.first_names.pop()
+                if "last" in params:
+                    if len(name) != 0:
+                        name += " "
+                    name += slow_data.last_names.pop()
+
+                json[output_name] = name
                 continue
 
             case "gender":
-                genders = datagen.genders(amount)
-                for i in range(len(genders)):
-                    json[i] = json[i] | {output_name: genders[i]}
-                continue
-
-            case "lorem-ipsum":
-                if params is None:
-                    params = [5, amount]
-
-                lorems = datagen.lorem_ipsum(params)
-                for i in range(len(lorems)):
-                    json[i] = json[i] | {output_name: lorems[i]}
-                continue
+                json[output_name] = datagen.gender()
 
         # Random ints in range
         try:
             ints = arg.split("-")
             int(ints[0])
-            numbers = datagen.numbers(int(ints[0]), int(ints[1]), amount)
-            for i in range(len(numbers)):
-                json[i] = json[i] | {output_name: numbers[i]}
+            json[output_name] = random.randint(int(ints[0]), int(ints[1]))
             continue
         except ValueError:
             pass
 
-
-def generateJson2(args: list, json: list):
-    amountToGen = count(args)
+    return json
 
 
-def count(args: list):
-    c = 0
-    c1 = 0
+class Counts:
+    def __init__(self):
+        self.first_names = 0
+        self.last_names = 0
+
+        self.lorems = 0
+
+
+def count(args: list) -> Counts:
+    counts = Counts()
     for arg in args:
         if arg[1] == "list":
-            counts = count(arg[2])
-            c += counts[0] * arg[3]
-            c1 += counts[1] * arg[3]
+            countsFromList = count(arg[2])
+            counts.first_names += countsFromList.first_names * arg[3]
+            counts.last_names += countsFromList.last_names * arg[3]
 
         elif arg[1] == "people-names":
-            c += 1
+            if len(arg) == 2:
+                arg.append(["first", "last"])
+
+            if "first" in arg[2]:
+                counts.first_names += 1
+            if "last" in arg[2]:
+                counts.last_names += 1
+
         elif arg[1] == "lorem-ipsum":
-            c1 += 1
+            counts.lorems += 1
 
-    return [c, c1]
-
-
-
-if __name__ == '__main__':
-    uvicorn.run(app, host="localhost", port=8000)
+    return counts
