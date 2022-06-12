@@ -28,6 +28,31 @@ def gender() -> str:
         return "F"
 
 
+def phone_number(area_code: str, format: str):
+    number = ""
+    if area_code is not None:
+        number += area_code
+    else:
+        for i in range(3):
+            number += str(random.randint(0, 9))
+
+    for i in range(7):
+        number += str(random.randint(0, 9))
+
+    if format == "":
+        return int(number)
+
+    if format == "formatted":
+        formatted = ""
+        for i in range(len(number)):
+            char = number[i]
+
+            if i == 3 or i == 6:
+                formatted += "-"
+            formatted += char
+        return formatted
+
+
 def lorem_ipsum(amount: int, words: int) -> list:
     lorems = []
     for i in range(amount):

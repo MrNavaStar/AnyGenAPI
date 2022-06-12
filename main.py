@@ -23,8 +23,7 @@ def index():
 async def generate(fastapi_req: fastapi.Request):
     data = await fastapi_req.body()
     args = argParser(data.decode("utf-8").replace(" ", "").replace("\n", "").replace("\t", "").replace("]", "];").casefold())
-    print(args)
-    return generateJson2(args, SlowData(args))
+    return generateJson(args, SlowData(args))
 
 
 def argParser(input: str) -> list:
@@ -61,12 +60,12 @@ def argParser(input: str) -> list:
     return args
 
 
-def generateJson2(args: list, slow_data: SlowData):
+def generateJson(args: list, slow_data: SlowData):
     json = {}
     for raw_arg in args:
         output_name = raw_arg[0]
         arg = raw_arg[1]
-        params = None
+        params = []
         if len(raw_arg) == 3:
             params = raw_arg[2]
 
@@ -74,12 +73,12 @@ def generateJson2(args: list, slow_data: SlowData):
             case "list":
                 json_array = []
                 for i in range(raw_arg[3]):
-                    json_array.append(generateJson2(raw_arg[2], slow_data))
+                    json_array.append(generateJson(raw_arg[2], slow_data))
 
                 json[output_name] = json_array
                 continue
 
-            case "people-names":
+            case "people_names":
                 name = ""
                 if "first" in params:
                     name += slow_data.first_names.pop()
@@ -93,6 +92,24 @@ def generateJson2(args: list, slow_data: SlowData):
 
             case "gender":
                 json[output_name] = datagen.gender()
+                continue
+
+            case "phone_number":
+                format = ""
+                if "formatted" in params:
+                    format = "formatted"
+
+                area_code = None
+                for param in params:
+                    try:
+                        ac = str(int(param))
+                        if len(ac) == 3:
+                            area_code = ac
+                    except ValueError:
+                        pass
+
+                json[output_name] = datagen.phone_number(area_code, format)
+                continue
 
         # Random ints in range
         try:
@@ -122,7 +139,7 @@ def count(args: list) -> Counts:
             counts.first_names += countsFromList.first_names * arg[3]
             counts.last_names += countsFromList.last_names * arg[3]
 
-        elif arg[1] == "people-names":
+        elif arg[1] == "people_names":
             if len(arg) == 2:
                 arg.append(["first", "last"])
 
