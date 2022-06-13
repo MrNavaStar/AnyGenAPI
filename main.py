@@ -10,8 +10,14 @@ app = FastAPI()
 class SlowData:
     def __init__(self, args):
         amountToGen = count(args)
-        self.first_names = datagen.people_names(amountToGen.first_names, "first")
-        self.last_names = datagen.people_names(amountToGen.last_names, "last")
+        self.err = None
+
+        if amountToGen.err is not None:
+            self.err = {"error": amountToGen.err}
+            return
+
+        self.first_names = datagen.person_names(amountToGen.first_names, "first")
+        self.last_names = datagen.person_names(amountToGen.last_names, "last")
 
 
 @app.get("/")
@@ -22,8 +28,14 @@ def index():
 @app.get("/generate")
 async def generate(fastapi_req: fastapi.Request):
     data = await fastapi_req.body()
-    args = argParser(data.decode("utf-8").replace(" ", "").replace("\n", "").replace("\t", "").replace("]", "];").casefold())
-    return generateJson(args, SlowData(args))
+    args = argParser(
+        data.decode("utf-8").replace(" ", "").replace("\n", "").replace("\t", "").replace("]", "];").casefold())
+
+    slow_data = SlowData(args)
+    if slow_data.err is not None:
+        return slow_data.err
+
+    return generateJson(args, slow_data)
 
 
 def argParser(input: str) -> list:
@@ -78,7 +90,7 @@ def generateJson(args: list, slow_data: SlowData):
                 json[output_name] = json_array
                 continue
 
-            case "people_names":
+            case "person_name":
                 name = ""
                 if "first" in params:
                     name += slow_data.first_names.pop()
@@ -125,21 +137,37 @@ def generateJson(args: list, slow_data: SlowData):
 
 class Counts:
     def __init__(self):
+        self.err = None
         self.first_names = 0
         self.last_names = 0
-
+        self.genders = 0
+        self.rand_ints = 0
+        self.phone_numbers = 0
         self.lorems = 0
 
+    def check(self):
+        if self.first_names > 1000 or self.last_names > 1000:
+            self.err = "You are trying to generate too many person names! (Max 1000)"
+        if self.genders > 10000:
+            self.err = "You are tying to generate too many genders! (Max 10000)"
+        if self.rand_ints > 10000:
+            self.err = "You are trying to generate too many random integers! (Max 10000)"
+        if self.phone_numbers > 10000:
+            self.err = "You are trying to generate too many phone numbers! (Max 10000)"
 
-def count(args: list) -> Counts:
+
+def count(args: list):
     counts = Counts()
     for arg in args:
         if arg[1] == "list":
             countsFromList = count(arg[2])
             counts.first_names += countsFromList.first_names * arg[3]
             counts.last_names += countsFromList.last_names * arg[3]
+            counts.genders += countsFromList.genders * arg[3]
+            counts.phone_numbers += countsFromList.phone_numbers * arg[3]
+            counts.rand_ints += countsFromList.rand_ints * arg[3]
 
-        elif arg[1] == "people_names":
+        elif arg[1] == "person_name":
             if len(arg) == 2:
                 arg.append(["first", "last"])
 
@@ -148,7 +176,26 @@ def count(args: list) -> Counts:
             if "last" in arg[2]:
                 counts.last_names += 1
 
+        elif arg[1] == "gender":
+            counts.genders += 1
+            print("test")
+
+        elif arg[1] == "phone_number":
+            counts.phone_numbers += 1
+
         elif arg[1] == "lorem-ipsum":
             counts.lorems += 1
+
+        try:
+            ints = arg[1].split("-")
+            int(ints[0])
+            counts.rand_ints += 1
+            continue
+        except ValueError:
+            pass
+
+        counts.check()
+        if counts.err is not None:
+            return counts
 
     return counts

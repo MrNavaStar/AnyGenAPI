@@ -2,7 +2,7 @@ import random
 from lorem_text import lorem
 
 
-def people_names(amount: int, type: str) -> list:
+def person_names(amount: int, type: str) -> list:
     names = []
     if type == "first":
         with open("data/first_names.csv") as fp:
