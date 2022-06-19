@@ -1,18 +1,22 @@
 import random
 from lorem_text import lorem
 
+email_domains = ["yahoo.ca", "yahoo.com", "aol.com", "verizon.net", "optonline.net", "comcast.net", "msn.com",
+                 "live.com", "sbcglobal.net", "icloud.com", "att.net", "hotmail.com", "hotmail.ca", "me.com",
+                 "gmail.com", "mac.com", "outlook.com", "telus.net"]
+
 
 def person_names(amount: int, type: str) -> list:
     names = []
     if type == "first":
-        with open("data/first_names.csv") as fp:
+        with open("data/first_names") as fp:
             data = fp.readlines()
             for i in range(amount):
                 names.append(data[random.randint(0, 147268)].replace("\n", ""))
             fp.close()
 
     if type == "last":
-        with open("data/last_names.csv") as fp:
+        with open("data/last_names") as fp:
             data = fp.readlines()
             for i in range(amount):
                 names.append(data[random.randint(0, 151670)].replace("\n", ""))
@@ -51,6 +55,10 @@ def phone_number(area_code: str, format: str):
                 formatted += "-"
             formatted += char
         return formatted
+
+
+def email(prefix: str):
+    return prefix.replace(" ", ".").lower() + "@" + email_domains[random.randint(0, 17)]
 
 
 def lorem_ipsum(amount: int, words: int) -> list:

@@ -29,7 +29,7 @@ def index():
 async def generate(fastapi_req: fastapi.Request):
     data = await fastapi_req.body()
     args = argParser(
-        data.decode("utf-8").replace(" ", "").replace("\n", "").replace("\t", "").replace("]", "];").casefold())
+        data.decode("utf-8").replace(" ", "").replace("\n", "").replace("\t", "").replace("]", "];").replace("()", "").casefold())
 
     slow_data = SlowData(args)
     if slow_data.err is not None:
@@ -74,6 +74,7 @@ def argParser(input: str) -> list:
 
 def generateJson(args: list, slow_data: SlowData):
     json = {}
+    names = []
     for raw_arg in args:
         output_name = raw_arg[0]
         arg = raw_arg[1]
@@ -100,6 +101,7 @@ def generateJson(args: list, slow_data: SlowData):
                     name += slow_data.last_names.pop()
 
                 json[output_name] = name
+                names.append(name)
                 continue
 
             case "gender":
@@ -122,6 +124,12 @@ def generateJson(args: list, slow_data: SlowData):
 
                 json[output_name] = datagen.phone_number(area_code, format)
                 continue
+
+            case "email":
+                for param in params:
+                    if param in json:
+                        json[output_name] = datagen.email(str(json[param]))
+                        continue
 
         # Random ints in range
         try:
@@ -168,6 +176,10 @@ def count(args: list):
             counts.rand_ints += countsFromList.rand_ints * arg[3]
 
         elif arg[1] == "person_name":
+            if len(arg) > 2 and len(arg[2]) > 2:
+                counts.err = "Too many args in person_name! (max 2, found " + str(len(arg[2])) + ")"
+                return counts
+
             if len(arg) == 2:
                 arg.append(["first", "last"])
 
@@ -177,10 +189,18 @@ def count(args: list):
                 counts.last_names += 1
 
         elif arg[1] == "gender":
+            if len(arg) > 2:
+                counts.err = "Too many args in gender! (max 0, found " + str(len(arg[2])) + ")"
+                return counts
+
             counts.genders += 1
             print("test")
 
         elif arg[1] == "phone_number":
+            if len(arg) > 2 and len(arg[2]) > 2:
+                counts.err = "Too many args in phone_number! (max 2, found " + str(len(arg[2])) + ")"
+                return counts
+
             counts.phone_numbers += 1
 
         elif arg[1] == "lorem-ipsum":
