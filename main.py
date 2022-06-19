@@ -57,7 +57,8 @@ def argParser(input: str) -> list:
             if "list" in data[1]:
                 count_and_args = re.split("\\)", data[1].replace("list(", "", 1), maxsplit=1)
                 data.append(argParser(count_and_args[1][1:-1]))
-                data.append(int(count_and_args[0]))
+                list_args = count_and_args[0].split(",")
+                data.append(int(list_args[0]))
                 data[1] = "list"
 
             else:
@@ -74,7 +75,6 @@ def argParser(input: str) -> list:
 
 def generateJson(args: list, slow_data: SlowData):
     json = {}
-    names = []
     for raw_arg in args:
         output_name = raw_arg[0]
         arg = raw_arg[1]
@@ -101,7 +101,6 @@ def generateJson(args: list, slow_data: SlowData):
                     name += slow_data.last_names.pop()
 
                 json[output_name] = name
-                names.append(name)
                 continue
 
             case "gender":
